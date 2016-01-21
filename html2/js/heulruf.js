@@ -1,6 +1,7 @@
 
-function test(){
-$.get( "data/", function( data ) {
+function load_playlist(){
+var data_dir = "./data/"
+$.get( data_dir, function( data ) {
   var html = $.parseHTML( data );
   // Iterate all links in the document received that end on
   // .mp3, parse these URLs and make them into a playlist
@@ -14,19 +15,24 @@ $.get( "data/", function( data ) {
 	if (parts.length == 3) {
 		var timestamp;
 		var playlist_element = {};
-		timestamp = Date(parseInt(parts[1]))
-		playlist_element['title'] = timestamp;
-		playlist_element['mp3'] = loc;
+		timestamp = parseInt(parts[1])
+		playlist_element['title'] = new Date(timestamp);
+		playlist_element['mp3'] = data_dir+loc;
+		playlist_element['unixdate'] = timestamp;
 		tracklist.push(playlist_element);
 	}
   }
+  // Now sort the playlist by unixdate
+  tracklist.sort(function(a, b) {
+    return a['unixdate'] - b['unixdate'];
+    });
 
   var myPlaylist = new jPlayerPlaylist({
 		jPlayer: "#jquery_jplayer_1",
 		cssSelectorAncestor: "#jp_container_1"
 	}, tracklist
 	, {
-		swfPath: "../../dist/jplayer",
+		swfPath: "bower_components/jPlayer/dist/jplayer/",
 		supplied: "oga, mp3",
 		wmode: "window",
 		useStateClassSkin: true,
@@ -34,13 +40,10 @@ $.get( "data/", function( data ) {
 		smoothPlayBar: true,
 		keyEnabled: true
 	});
-  alert( "Load was performed." );
 });
 }
 
 // Initializer
 $(document).ready(function() {
-
-	$("#test").on("click", test);
-
+	load_playlist();
 });
