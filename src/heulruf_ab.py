@@ -40,7 +40,7 @@ def render_beep(freq, duration):
 
 # This defines the two beep sequences for user feedback.
 # beep_on signified the start of a recording to the user
-beep_on = render_beep(425,.1) +  render_beep(425*2,.1)
+beep_on = render_beep(425,.25) +  render_beep(425*2,.25) + render_beep(425,.25) + render_beep(425*2,.25)
 # beeo_of tells the user the recording has ended.
 beep_off = render_beep(2*425,.1) +  render_beep(425,.1)
 
@@ -83,7 +83,7 @@ class sender(threading.Thread):
                             # When buffer ran empty, holdoff until retriggering
                             # so echoes of our beep_off will not cause disruptions
                             if len(output_buffer)>0:
-                                record_holdoff = 10
+                                record_holdoff = 50
                             output_buffer = ""
 
                         # Pad with silence
@@ -131,17 +131,16 @@ class receiver(threading.Thread):
             global running
             
             
-            threshold = 50
+            threshold = 500
             while running:
                 try:
                     (sample_len, raw_data) = self.device.read()
                     in_array = array.array("h")
                     in_array.fromstring(raw_data)
 
-                    peak_peak = 0
+                    peak_peak = max(in_array) - min(in_array)
                     if (len(output_buffer)==0) and (record_holdoff==0):
-                        peak_peak = max(in_array) - min(in_array)
-                        if peak_peak > 5*threshold:
+                        if peak_peak > 1.5*threshold:
                             if (recording_timeout==0):
                                 output_buffer = beep_on
                                 record_buffer = array.array("h")
@@ -149,7 +148,8 @@ class receiver(threading.Thread):
                             recording_timeout = 50
                         else:
                             # Only adjust threshold in silence
-                            threshold = (threshold*5 + peak_peak) / 6
+                            if (recording_timeout==0):
+                                    threshold = (threshold*5 + peak_peak) / 6
 
                     if record_holdoff>0:
                         record_holdoff-=1
@@ -204,8 +204,8 @@ while running:
                 data.tofile(f)
                 f.close()
             print "End write"
-            command = "mkdir -p /tmp/outqueue; (nice -n 10 sox -r{1} -c1 {0}.s16 {0}.mp3 compand 0.3,.8 6:-70,-60,-20 norm -3 && rm {0}.s16 ; mv {0}.mp3 /tmp/outqueue ; {} ) &".format(recording_name,RATE, SEND_CMD)
-            #os.system(command)
+            command = "mkdir -p /tmp/outqueue; (nice -n 10 sox -r{1} -c1 {0}.s16 {0}.mp3 compand 0.3,.8 6:-70,-60,-20 norm -3 && rm {0}.s16 ; mv {0}.mp3 /tmp/outqueue ; {2} ) &".format(recording_name,RATE, SEND_CMD)
+            os.system(command)
 
 
 running=False
