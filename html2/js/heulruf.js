@@ -1,6 +1,6 @@
 
 function load_playlist(){
-var data_dir = "./telefon/"
+var data_dir = "./data/"
 $.get( data_dir, function( data ) {
   var html = $.parseHTML( data );
   // Iterate all links in the document received that end on
@@ -12,7 +12,7 @@ $.get( data_dir, function( data ) {
 
   for (i=0; i<links.length; i++){
   	var loc = links[i].getAttribute("href");
-	var parts = loc.split(/[_.]/);
+	var parts = loc.split(/[_.\-]/);
 	if (parts.length == 3) {
 		var timestamp;
 		var playlist_element = {};
