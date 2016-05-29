@@ -12,15 +12,25 @@ import os
 import threading
 import alsaaudio
 import signal,sys
+import argparse
+import audioop
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-u", "--uploadscript", help="upload script file, arg: directory",
+                    default=None)
+parser.add_argument("-r", "--samplerate", help="Sample rate in Hz",
+                    default=16000)
+args = parser.parse_args()
+
+upload_script=args.uploadscript
 
 WIDTH = 2
 CHANNELS = 1
-RATE = 16000
-# Please set upload destination path here
-SEND_CMD = "rsync -vcr /tmp/outqueue/ USER@HOST:path"
+RATE = args.samplerate
 
 # Base frequency for inband answerback tones and sequencees
 FREQ = 425
+
 
 
 def render_beep(freq, duration):
@@ -138,9 +148,10 @@ class receiver(threading.Thread):
                     in_array = array.array("h")
                     in_array.fromstring(raw_data)
 
-                    peak_peak = max(in_array) - min(in_array)
+                    #rms = max(in_array) - min(in_array)
+                    rms = audioop.rms(in_array, 2)
                     if (len(output_buffer)==0) and (record_holdoff==0):
-                        if peak_peak > 1.5*threshold:
+                        if rms > 1.5*threshold:
                             if (recording_timeout==0):
                                 output_buffer = beep_on
                                 record_buffer = array.array("h")
@@ -149,7 +160,7 @@ class receiver(threading.Thread):
                         else:
                             # Only adjust threshold in silence
                             if (recording_timeout==0):
-                                    threshold = (threshold*5 + peak_peak) / 6
+                                    threshold = (threshold*5 + rms) / 6
 
                     if record_holdoff>0:
                         record_holdoff-=1
@@ -158,7 +169,7 @@ class receiver(threading.Thread):
                     record_buffer += in_array
 
 
-                    print self.sample_len, len(output_buffer), recording_timeout, threshold, peak_peak
+                    print self.sample_len, len(output_buffer), recording_timeout, threshold, rms
                 except Exception as e:
                     print e
                     traceback.print_exc()
@@ -204,7 +215,7 @@ while running:
                 data.tofile(f)
                 f.close()
             print "End write"
-            command = "mkdir -p /tmp/outqueue; (nice -n 10 sox -r{1} -c1 {0}.s16 {0}.mp3 compand 0.3,.8 6:-70,-60,-20 norm -3 && rm {0}.s16 ; mv {0}.mp3 /tmp/outqueue ; {2} ) &".format(recording_name,RATE, SEND_CMD)
+            command = "mkdir -p /tmp/outqueue; (nice -n 10 sox -r{1} -c1 {0}.s16 {0}.mp3 compand 0.3,.8 6:-70,-60,-20 norm -3 && rm {0}.s16 ; mv {0}.mp3 /tmp/outqueue ; {2} /tmp/outqueue ) &".format(recording_name,RATE, upload_script)
             os.system(command)
 
 
