@@ -14,6 +14,7 @@ import alsaaudio
 import signal,sys
 import argparse
 import audioop
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--uploadscript", help="upload script file, arg: directory",
@@ -166,10 +167,12 @@ class receiver(threading.Thread):
                         record_holdoff-=1
 
                     # Record if necessary
-                    record_buffer += in_array
+                    if recording_timeout == 0:
+                        record_buffer += in_array
 
 
-                    print self.sample_len, len(output_buffer), recording_timeout, threshold, rms
+                    sys.stdout.write("            \r{} {} {} {}".format(len(output_buffer), recording_timeout, threshold, rms))
+                    sys.stdout.flush()
                 except Exception as e:
                     print e
                     traceback.print_exc()
