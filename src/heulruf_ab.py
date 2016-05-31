@@ -28,6 +28,7 @@ upload_script=args.uploadscript
 WIDTH = 2
 CHANNELS = 1
 RATE = args.samplerate
+max_record_time = 600
 
 # Base frequency for inband answerback tones and sequencees
 FREQ = 425
@@ -140,8 +141,10 @@ class receiver(threading.Thread):
             global output_buffer
             global record_buffer
             global running
-            
-            
+            global max_record_time
+
+            max_record_len = RATE * max_record_time
+
             threshold = 500
             while running:
                 try:
@@ -167,11 +170,14 @@ class receiver(threading.Thread):
                         record_holdoff-=1
 
                     # Record if necessary
-                    if recording_timeout == 0:
+                    if recording_timeout != 0:
                         record_buffer += in_array
+                        # Abort when recording is too long
+                        if len(record_buffer)>max_record_len:
+                            recording_timeout = 0
 
 
-                    sys.stdout.write("            \r{} {} {} {}".format(len(output_buffer), recording_timeout, threshold, rms))
+                    sys.stdout.write("            \r{} {} {} {} {}".format(len(output_buffer), len(record_buffer), recording_timeout, threshold, rms))
                     sys.stdout.flush()
                 except Exception as e:
                     print e
